@@ -75,7 +75,7 @@ public class SceneManagerScript : MonoBehaviour
     void Awake()
     {
         //カーソル非表示
-        Cursor.visible = false;
+        //Cursor.visible = false;
         _eventSystem = GameObject.FindObjectOfType<EventSystem>();
         _fade = _fade_Object.GetComponent<RectTransform>();
         if (_lord != null)
