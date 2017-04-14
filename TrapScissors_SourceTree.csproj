@@ -75,6 +75,7 @@
     <Compile Include="Assets\Kageyama\Script\SceneManagerScript.cs" />
     <Compile Include="Assets\Kageyama\Script\SoundManger.cs" />
     <Compile Include="Assets\LeanTween.cs" />
+    <Compile Include="Assets\Suzuki\Item\Program\item.cs" />
     <Compile Include="Assets\Yajima\Enemy\Program\Enemy.cs" />
     <Compile Include="Assets\Yajima\Enemy\Program\WallChackPoint.cs" />
   </ItemGroup>
