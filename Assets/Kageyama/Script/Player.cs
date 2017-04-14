@@ -7,7 +7,8 @@ public class Player : MonoBehaviour
     public enum State
     {
         Wait,
-        Touch
+        Touch,
+        Endure
     }
     public State _state;
 
@@ -21,6 +22,17 @@ public class Player : MonoBehaviour
     private Vector3 offset = Vector3.zero;
     //鋏んだときの反動中かどうか
     public bool _recoil;
+    //暴れるのを耐えるゲージ
+    public float _endureGage;
+    //離すときに数える数
+    private int _separate;
+    //ゲージが増える速さ
+    public float _gageSpeed;
+    //落とされるまでの時間を計測する値
+    private float _fallTimeCheck;
+    //落とされるまでの時間
+    private float _fallTime;
+
     #endregion
 
     #region 移動や重力に必要な変数
@@ -40,6 +52,11 @@ public class Player : MonoBehaviour
         _recoil = false;
         _state = State.Wait;
         _groundOn = false;
+        _endureGage = 0;
+        _fallTime = 5;
+        _fallTimeCheck = 0;
+        _gageSpeed = 1.0f;
+        _separate = 0;
     }
 	
 	// Update is called once per frame
@@ -55,14 +72,20 @@ public class Player : MonoBehaviour
         {
             Move(3.0f);
             Action();
+            if (_state == State.Endure)
+            {
+                EndureAction();
+            }
         }
+
+        
 	}
 
     void Move(float gravity)
     {
         Vector2 newPosition = transform.position;
         //何かを挟んでいたら、位置を固定する
-        if (_state == State.Touch)
+        if (_state != State.Wait)
         {
             _gadd = 0;
             newPosition.x = _target.transform.position.x + offset.x;
@@ -93,27 +116,63 @@ public class Player : MonoBehaviour
                 SoundManger.Instance.PlaySE(1);
             }
         }
+
+        //何かを挟んでいたら
+        if(_state == State.Touch)
+        {
+            if(Input.GetKey(KeyCode.Z))
+            {
+                _separate++;
+            }
+            if (Input.GetKeyUp(KeyCode.Z)) _separate = 0;
+            if (_separate > 60)
+            {
+                _target = null;
+                _endureGage = 0;
+                _separate = 0;
+                _state = State.Wait;
+            }
+        }
         //ターゲットを外す
-        if ((Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.X)) && _recoil == false)
+        //if ((Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.X)) && _recoil == false)
+        //{
+        //    _target = null;
+        //    _state = State.Wait;
+        //}
+    }
+    void EndureAction()
+    {
+        _fallTimeCheck += Time.deltaTime;
+        if(_fallTimeCheck > _fallTime)
         {
             _target = null;
             _state = State.Wait;
+            _fallTimeCheck = 0;
+            _endureGage = 0;
+            return;
         }
-
-
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            _endureGage += 10 * _gageSpeed;
+        }
+        //時間内に100までGageを溜めれば確実に鋏むことができる
+        if(_endureGage >= 100)
+        {
+            _state = State.Touch;
+            _fallTimeCheck = 0;
+        }
     }
 
     void OnTriggerStay2D(Collider2D col)
     {
+        //鋏む相手を探しているとき以外は衝突しても無視するを無視する
+        if (_state != State.Wait) return;
         //何かとぶつかっているときにZボタンを押すと大きいハサミで鋏む
         if (Input.GetKeyDown(KeyCode.Z) && _target == null &&
             col.tag != "Ground" && col.tag != "Gimmick")
         {
             _target = col.gameObject;
-            _recoil = true;
-            offset = transform.position - _target.transform.position;
-            _state = State.Touch;
-            StartCoroutine(Recoil());
+            Scissors();
         }
 
         //何かとぶつかっているときにXボタンを押すと小さいハサミで鋏む
@@ -121,19 +180,26 @@ public class Player : MonoBehaviour
             col.tag != "Ground")
         {
             _target = col.gameObject;
-            _recoil = true;
-            offset = transform.position - _target.transform.position;
-            _state = State.Touch;
-            StartCoroutine(Recoil());
+            Scissors();
         }
 
+        //地面とぶつかっていたら重力による落下を止める
         if (col.tag == "Ground")
         {
             _gadd = 0;
             _groundOn = true;
         }
     }
-    
+
+    void Scissors()
+    {
+        _recoil = true;
+        offset = transform.position - _target.transform.position;
+        _state = State.Endure;
+        StartCoroutine(Recoil());
+    }
+
+
     void OnTriggerExit2D(Collider2D col)
     {
         //挟まらずに離れたらターゲットを外す
